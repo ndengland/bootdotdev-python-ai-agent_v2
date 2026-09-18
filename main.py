@@ -1,5 +1,38 @@
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+
+
 def main():
     print("Hello from bootdotdev-python-ai-agent-v2!")
+
+    load_dotenv()
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+
+    # If the environment variable wasn't found - i.e., if api_key is None - raise a RuntimeError with a helpful message.
+    if api_key is None:
+        raise RuntimeError("No value for OPENROUTER_API_KEY found in .env file.")
+
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
+
+    response = client.chat.completions.create(
+        model="openrouter/free",
+        messages=[
+            {
+                "role": "user",
+                "content": "Why is Boot.dev such a great place to learn backend development? Use one paragraph maximum.",
+            }
+        ],
+    )
+
+    # The method returns a chat completion object. The model's text answer lives at response.choices[0].message.content. Print it to see the model's answer.
+    response_message = response.choices[0].message.content
+
+    print(response_message)
+
 
 
 if __name__ == "__main__":
