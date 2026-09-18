@@ -31,6 +31,17 @@ def main():
     # The method returns a chat completion object. The model's text answer lives at response.choices[0].message.content. Print it to see the model's answer.
     response_message = response.choices[0].message.content
 
+    """
+    Prompt tokens: X
+    Response tokens: Y
+    """
+    prompt_tokens = response.usage.prompt_tokens
+    completion_tokens = response.usage.completion_tokens
+
+    print(f"Prompt tokens: {prompt_tokens}")
+    print(f"Response tokens: {completion_tokens}")
+
+    print("Response Message:")
     print(response_message)
 
 
