@@ -1,8 +1,12 @@
 import os
 import argparse
+from typing import Any
 
 from dotenv import load_dotenv
 from openai import OpenAI
+
+_AI_MODAL = "openrouter/free"
+_AI_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 def main():
@@ -26,18 +30,20 @@ def main():
     print(f"User Prompt: {user_prompt}")
 
     client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,
+        base_url = _AI_BASE_URL,
+        api_key = api_key,
     )
 
+    session_messages = [
+        {
+            "role": "user",
+            "content": user_prompt,
+        }
+    ]
+
     response = client.chat.completions.create(
-        model="openrouter/free",
-        messages=[
-            {
-                "role": "user",
-                "content": user_prompt,
-            }
-        ],
+        model = _AI_MODAL,
+        messages = session_messages
     )
 
     # The method returns a chat completion object. The model's text answer lives at response.choices[0].message.content. Print it to see the model's answer.
