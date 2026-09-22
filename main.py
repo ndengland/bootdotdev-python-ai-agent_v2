@@ -10,8 +10,6 @@ _AI_BASE_URL = "https://openrouter.ai/api/v1"
 
 
 def main():
-    print("Hello from bootdotdev-python-ai-agent-v2!")
-
     load_dotenv()
     api_key = os.environ.get("OPENROUTER_API_KEY")
 
@@ -22,12 +20,12 @@ def main():
     # Handle command line arguments:
     parser = argparse.ArgumentParser(description="bootdotdev AI Agent")
     parser.add_argument("user_prompt", type=str, help="User prompt")
+    parser.add_argument("--verbose", action = "store_true", help = "Enable verbose output")
     args = parser.parse_args()
 
     # Now we can access `args.user_prompt`
     user_prompt = args.user_prompt
-
-    print(f"User Prompt: {user_prompt}")
+    verbose_mode = args.verbose
 
     client = OpenAI(
         base_url = _AI_BASE_URL,
@@ -56,11 +54,14 @@ def main():
     prompt_tokens = response.usage.prompt_tokens
     completion_tokens = response.usage.completion_tokens
 
-    print(f"Prompt tokens: {prompt_tokens}")
-    print(f"Response tokens: {completion_tokens}")
+    if verbose_mode:
+        # Print metadata:
+        print(f"User prompt: {user_prompt}")
+        print(f"Prompt tokens: {prompt_tokens}")
+        print(f"Response tokens: {completion_tokens}")
 
-    print("Response Message:")
-    print(response_message)
+
+    print(f"Response Message: {response_message}")
 
 
 
