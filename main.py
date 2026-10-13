@@ -1,12 +1,8 @@
 import os
 import argparse
-from typing import Any
-
 from dotenv import load_dotenv
 from openai import OpenAI
-
-_AI_MODAL = "openrouter/free"
-_AI_BASE_URL = "https://openrouter.ai/api/v1"
+from config import AI_BASE_URL, AI_MODAL
 
 
 def main():
@@ -28,7 +24,7 @@ def main():
     verbose_mode = args.verbose
 
     client = OpenAI(
-        base_url = _AI_BASE_URL,
+        base_url = AI_BASE_URL,
         api_key = api_key,
     )
 
@@ -40,7 +36,7 @@ def main():
     ]
 
     response = client.chat.completions.create(
-        model = _AI_MODAL,
+        model = AI_MODAL,
         messages = session_messages
     )
 
