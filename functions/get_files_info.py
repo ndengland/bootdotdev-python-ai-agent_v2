@@ -20,6 +20,7 @@ def get_files_info(working_directory: str, directory: str = ".") -> str:
     :return: str
     """
 
+    # TODO this would be a useful tool function
     working_dir_abs_path = os.path.abspath(working_directory)
     target_dir_full_path = os.path.normpath(os.path.join(working_dir_abs_path, directory))
     valid_target_dir = os.path.commonpath([working_dir_abs_path, target_dir_full_path]) == working_dir_abs_path
