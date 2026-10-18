@@ -3,6 +3,7 @@ import argparse
 from dotenv import load_dotenv
 from openai import OpenAI
 from config import AI_BASE_URL, AI_MODAL
+from prompts import system_prompt
 
 
 def main():
@@ -30,6 +31,9 @@ def main():
 
     session_messages = [
         {
+            "role": "system",
+            "content": system_prompt},
+        {
             "role": "user",
             "content": user_prompt,
         }
@@ -37,7 +41,8 @@ def main():
 
     response = client.chat.completions.create(
         model = AI_MODAL,
-        messages = session_messages
+        messages = session_messages,
+        temperature = 0,  # temperature = 0 for more deterministic output. (Takes the system_prompt more seriously)
     )
 
     # The method returns a chat completion object. The model's text answer lives at response.choices[0].message.content. Print it to see the model's answer.
