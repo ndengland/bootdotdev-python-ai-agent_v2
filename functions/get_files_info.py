@@ -7,7 +7,6 @@ This means we can limit the scope of directories and files that the LLM is able 
 """
 import os.path
 
-
 def get_files_info(working_directory: str, directory: str = ".") -> str:
     """
 
