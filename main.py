@@ -4,7 +4,8 @@ import argparse
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from call_function import available_functions
+import call_function
+from call_function import available_functions, call_function
 from config import AI_BASE_URL, AI_MODAL
 from prompts import system_prompt
 
@@ -59,7 +60,16 @@ def main():
         for tool_call in response_message.tool_calls:
             function_args = json.loads(tool_call.function.arguments or "{}")
             print(f"Calling function: {tool_call.function.name}({function_args})")
-    else:
+
+            # CALL / EXECUTE THE FUNCTION:
+            result_message = call_function(tool_call, verbose_mode)
+
+            if not result_message["content"]:
+                raise Exception(f"Error - no result returned from call_function.")
+            else:
+                print(f"-> {result_message['content']}")
+
+    elif verbose_mode:
         print(f"Response Message: {response_message}")
 
 

@@ -1,5 +1,12 @@
 # Our AI Agent needs a list of functions (more specifically, their schemas)
 # This file contains our tools that the LLM can use.
+import json
+from collections.abc import Callable
+from config import WORKING_DIR
+from functions.get_file_content import get_file_content
+from functions.get_files_info import get_files_info
+from functions.run_python_file import run_python_file
+from functions.write_file import write_file
 
 
 # OpenAI SDK schema to define this as a function we can use in an LLM:
@@ -121,3 +128,58 @@ available_functions = [
     schema_run_python_file,
     schema_write_file
 ]
+
+def call_function(tool_call, verbose: bool = False) -> dict:
+    """
+
+    :param tool_call: One of the tool-call objects from message.tool_calls
+        contains tool_call.function.name (name of a function as a string)
+        tool_call.function.arguments (arguments for the tool call as a JSON string)
+        too_call.id (unique identifier for this specific call, and is needed to send the result back)
+    :param verbose: if true, print more verbose output to console.
+    :return:
+    """
+
+    function_name : str = tool_call.function.name
+    function_args : dict = json.loads(tool_call.function.arguments or {})
+
+    if verbose:
+        print(f" - Calling function: {function_name}({function_args})")
+    else:
+        print(f" - Calling function: {function_name}")
+
+    # we need to determine which of our internal functions we need to call (if any)
+    # we need to map our function NAMES to a useful dictionary
+
+    # noinspection bad-assignment
+    function_map: dict[str, Callable[..., str]] = {
+        "get_file_content": get_file_content,
+        "get_files_info": get_files_info,
+        "run_python_file": run_python_file,
+        "write_file": write_file,
+    }
+
+    if function_name not in function_map:
+        # if the provided function name is _not_ found in our mapping, return a tool message with appropriate details:
+        unknown_function: dict = {
+            "role": "tool",
+            "tooL_call_id": tool_call.id,
+            "content": f"Error: Unknown function: {function_name}",
+        }
+        return unknown_function
+
+    # We need to inject `working_directory` argument into the function_args dict. The LLM doesn't know about it:
+    function_args["working_directory"] = WORKING_DIR
+
+    # CALL THE FUNCTION:
+    function_result = function_map[function_name](**function_args)
+
+    return {
+        "role": "tool",
+        "tool_call_id": tool_call.id,
+        "content": function_result,
+    }
+
+
+
+
