@@ -1,22 +1,17 @@
 import json
 import os
 import argparse
-from dotenv import load_dotenv
-from openai import OpenAI
+import sys
 
 import call_function
+from dotenv import load_dotenv
+from openai import OpenAI
 from call_function import available_functions, call_function
-from config import AI_BASE_URL, AI_MODAL
+from config import AI_BASE_URL, AI_MODAL, AGENT_LOOP_LIMIT
 from prompts import system_prompt
 
 
 def main():
-    load_dotenv()
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-
-    # If the environment variable wasn't found - i.e., if api_key is None - raise a RuntimeError with a helpful message.
-    if api_key is None:
-        raise RuntimeError("No value for OPENROUTER_API_KEY found in .env file.")
 
     # Handle command line arguments:
     parser = argparse.ArgumentParser(description="bootdotdev AI Agent")
@@ -24,7 +19,13 @@ def main():
     parser.add_argument("--verbose", action = "store_true", help = "Enable verbose output")
     args = parser.parse_args()
 
-    # Now we can access `args.user_prompt`
+    load_dotenv()
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+
+    # If the environment variable wasn't found - i.e., if api_key is None - raise a RuntimeError with a helpful message.
+    if not api_key:
+        raise RuntimeError("No value for OPENROUTER_API_KEY found in .env file.")
+
     user_prompt = args.user_prompt
     verbose_mode = args.verbose
 
@@ -43,48 +44,54 @@ def main():
         }
     ]
 
-    response = client.chat.completions.create(
-        model = AI_MODAL,
-        messages = session_messages,
-        temperature = 0,  # temperature = 0 for more deterministic output. (Takes the system_prompt more seriously)
-        tools = available_functions
-    )
-
-    # The method returns a chat completion object. The model's text answer lives at response.choices[0].message.content. Print it to see the model's answer.
-    # OLD: response_message = response.choices[0].message.content
-    response_message = response.choices[0].message
-
-    # We need to get the 'too_calls' information from the response:
-
-    if response_message.tool_calls:
-        for tool_call in response_message.tool_calls:
-            function_args = json.loads(tool_call.function.arguments or "{}")
-            print(f"Calling function: {tool_call.function.name}({function_args})")
-
-            # CALL / EXECUTE THE FUNCTION:
-            result_message = call_function(tool_call, verbose_mode)
-
-            if not result_message["content"]:
-                raise Exception(f"Error - no result returned from call_function.")
-            else:
-                print(f"-> {result_message['content']}")
-
-    elif verbose_mode:
-        print(f"Response Message: {response_message}")
-
-
-    """
-    Prompt tokens: X
-    Response tokens: Y
-    """
-    prompt_tokens = response.usage.prompt_tokens
-    completion_tokens = response.usage.completion_tokens
-
     if verbose_mode:
-        # Print metadata:
-        print(f"User prompt: {user_prompt}")
-        print(f"Prompt tokens: {prompt_tokens}")
-        print(f"Response tokens: {completion_tokens}")
+        print(f"User prompt: {user_prompt}\n")
+
+    for _ in range(AGENT_LOOP_LIMIT):
+        try:
+            final_response = generate_content(client, session_messages, verbose_mode)
+
+            if final_response:
+                print("Final response:")
+                print(final_response)
+                return
+        except Exception as e:
+            print(f"Error in generate content: {e}")
+
+    print(f"Maximum iterations ({AGENT_LOOP_LIMIT}) reached")
+    sys.exit(1)
+
+
+def generate_content(client: OpenAI, messages: list, verbose: bool) -> str | None:
+    response = client.chat.completions.create(
+        model="openrouter/free",
+        messages=messages,
+        tools=available_functions,
+    )
+    if not response.usage:
+        raise RuntimeError("API response appears to be malformed")
+
+    if verbose:
+        print("Prompt tokens:", response.usage.prompt_tokens)
+        print("Response tokens:", response.usage.completion_tokens)
+
+    message = response.choices[0].message
+    messages.append(message)
+
+    if not message.tool_calls:
+        return message.content
+
+    for tool_call in message.tool_calls:
+        if tool_call.type != "function":
+            continue
+        result_message = call_function(tool_call, verbose)
+        if not result_message.get("content"):
+            raise RuntimeError(f"Empty function response for {tool_call.function.name}")
+        if verbose:
+            print(f"-> {result_message['content']}")
+        messages.append(result_message)
+
+    return None
 
 
 
